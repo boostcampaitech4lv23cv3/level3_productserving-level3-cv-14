@@ -59,13 +59,13 @@ ENV PATH /opt/conda/bin:$PATH
 ### install open-mim
 RUN /opt/conda/bin/pip install mmcv-full==${MMCV_VERSION} -f https://download.openmmlab.com/mmcv/dist/cpu/torch${TORCH_VERSION}/index.html
 
-WORKDIR /root/workspace
+WORKDIR /opt/ml/input
 
 ### get onnxruntime
 RUN wget https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/onnxruntime-linux-x64-${ONNXRUNTIME_VERSION}.tgz \
     && tar -zxvf onnxruntime-linux-x64-${ONNXRUNTIME_VERSION}.tgz
 
-ENV ONNXRUNTIME_DIR=/root/workspace/onnxruntime-linux-x64-${ONNXRUNTIME_VERSION}
+ENV ONNXRUNTIME_DIR=/opt/ml/input/onnxruntime-linux-x64-${ONNXRUNTIME_VERSION}
 
 ### install onnxruntme and openvino
 RUN /opt/conda/bin/pip install onnxruntime==${ONNXRUNTIME_VERSION} openvino-dev
@@ -79,13 +79,13 @@ RUN git clone https://github.com/Tencent/ncnn.git &&\
     cmake -DNCNN_VULKAN=OFF -DNCNN_SYSTEM_GLSLANG=ON -DNCNN_BUILD_EXAMPLES=ON -DNCNN_PYTHON=ON -DNCNN_BUILD_TOOLS=ON -DNCNN_BUILD_BENCHMARK=ON -DNCNN_BUILD_TESTS=ON .. &&\
     make -j$(nproc) &&\
     make install &&\
-    cd /root/workspace/ncnn/python &&\
+    cd /opt/ml/input/ncnn/python &&\
     pip install -e .
 
-ENV PATH="/root/workspace/ncnn/build/tools/quantize/:${PATH}"
+ENV PATH="/opt/ml/input/ncnn/build/tools/quantize/:${PATH}"
 
 ### install mmdeploy
-WORKDIR /root/workspace
+WORKDIR /opt/ml/input
 ARG VERSION
 RUN git clone https://github.com/open-mmlab/mmdeploy.git &&\
     cd mmdeploy &&\
@@ -94,7 +94,7 @@ RUN git clone https://github.com/open-mmlab/mmdeploy.git &&\
     rm -rf build &&\
     mkdir build &&\
     cd build &&\
-    cmake -DMMDEPLOY_TARGET_BACKENDS=ncnn -Dncnn_DIR=/root/workspace/ncnn/build/install/lib/cmake/ncnn .. &&\
+    cmake -DMMDEPLOY_TARGET_BACKENDS=ncnn -Dncnn_DIR=/opt/ml/input/ncnn/build/install/lib/cmake/ncnn .. &&\
     make -j$(nproc) &&\
     cmake -DMMDEPLOY_TARGET_BACKENDS=ort .. &&\
     make -j$(nproc) &&\
@@ -102,13 +102,13 @@ RUN git clone https://github.com/open-mmlab/mmdeploy.git &&\
     pip install -e .
 
 ### build SDK
-ENV LD_LIBRARY_PATH="/root/workspace/mmdeploy/build/lib:/opt/intel/openvino/deployment_tools/ngraph/lib:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64:${LD_LIBRARY_PATH}"
+ENV LD_LIBRARY_PATH="/opt/ml/input/mmdeploy/build/lib:/opt/intel/openvino/deployment_tools/ngraph/lib:/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64:${LD_LIBRARY_PATH}"
 RUN cd mmdeploy && rm -rf build/CM* && mkdir -p build && cd build && cmake .. \
     -DMMDEPLOY_BUILD_SDK=ON \
     -DMMDEPLOY_BUILD_EXAMPLES=ON \
     -DCMAKE_CXX_COMPILER=g++-7 \
     -DONNXRUNTIME_DIR=${ONNXRUNTIME_DIR} \
-    -Dncnn_DIR=/root/workspace/ncnn/build/install/lib/cmake/ncnn \
+    -Dncnn_DIR=/opt/ml/input/ncnn/build/install/lib/cmake/ncnn \
     -DInferenceEngine_DIR=/opt/intel/openvino/deployment_tools/inference_engine/share \
     -DMMDEPLOY_TARGET_DEVICES=cpu \
     -DMMDEPLOY_BUILD_SDK_PYTHON_API=ON \
@@ -127,14 +127,10 @@ RUN wget https://github.com/open-mmlab/mmdeploy/releases/download/v0.12.0/mmdepl
     cd ..
     
 # code
-COPY ./code/fastapi /root/workspace/code/fastapi
-COPY ./data/models/on-device-model /root/workspace/data/models/on-device-model
-WORKDIR /root/workspace/code/fastapi
+COPY ./code/fastapi /opt/ml/input/code/fastapi
+COPY ./data/models/on-device-model /opt/ml/input/data/models/on-device-model
+WORKDIR /opt/ml/input/code/fastapi
 
 RUN pip install --upgrade pip
 RUN pip install -r ./app/back/back_requirements.txt
 
-# setting
-RUN echo "export ONNXRUNTIME_DIR=${ONNXRUNTIME_DIR}" >> /etc/bash.bashrc
-RUN echo "export LD_LIBRARY_PATH=$ONNXRUNTIME_DIR/lib:$LD_LIBRARY_PATH" >> /etc/bash.bashrc
-RUN source /etc/bash.bashrc 

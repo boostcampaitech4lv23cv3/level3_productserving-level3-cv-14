@@ -7,7 +7,7 @@ import io
 sys.path.append("/opt/ml/input/code/fastapi/app/front")
 from utils import *
 
-backend_server = "118.67.135.56:30002"
+backend_server = "34.64.169.3:30002"
 
 st.set_page_config(layout="wide")
 

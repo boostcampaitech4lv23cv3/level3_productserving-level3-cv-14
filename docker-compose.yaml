@@ -1,7 +1,19 @@
 version: "3.0"
 services:
+  back:
+    build:
+      context: .
+      dockerfile: code/fastapi/app/back/Dockerfile
+    ports:
+      - "30002:30002"
+    command: sh app/back/back.sh
+
   front:
-    build: .
+    build: 
+      context: .
+      dockerfile: code/fastapi/app/front/Dockerfile
     ports:
       - "30001:30001"
     command: python3 -m streamlit run app/front/main.py --server.port 30001 --server.fileWatcherType none
+
+    

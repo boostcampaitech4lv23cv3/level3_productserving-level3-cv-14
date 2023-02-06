@@ -430,3 +430,22 @@ class Inference_v2:
         _score = score(result, self.answer)
         scoring_img = self.save_score_img(_score)
         return scoring_img, log_pred
+
+
+class InferenceOnDevice(Inference_v2):
+    def __init__(self, images, detector, q_bbox, answer, img_shape, time):
+        self.images = images
+        self.detector = detector
+        self.q_bbox = q_bbox
+        self.answer = answer
+        self.origin_img_shape = img_shape
+        self.time = time
+
+    def get_predict(self, img, box_threshold=0.1):
+        bboxes, labels, _ = self.detector(img)
+        predict = []
+        for label, bboxes in zip(labels, bboxes):
+            for bbox in bboxes:
+                if bbox[-1] > box_threshold:
+                    predict.append(list(bbox) + [label])
+        return predict

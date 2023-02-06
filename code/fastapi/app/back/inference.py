@@ -444,8 +444,7 @@ class InferenceOnDevice(Inference_v2):
     def get_predict(self, img, box_threshold=0.1):
         bboxes, labels, _ = self.detector(img)
         predict = []
-        for label, bboxes in zip(labels, bboxes):
-            for bbox in bboxes:
-                if bbox[-1] > box_threshold:
-                    predict.append(list(bbox) + [label])
+        for bbox, label in zip(bboxes, labels):
+            if bbox[-1] > box_threshold:
+                predict.append(list(bbox) + [label])
         return predict

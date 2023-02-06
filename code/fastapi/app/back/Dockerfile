@@ -129,8 +129,8 @@ RUN wget https://github.com/open-mmlab/mmdeploy/releases/download/v0.12.0/mmdepl
 # code
 COPY ./code/fastapi /opt/ml/input/code/fastapi
 COPY ./data/models/on-device-model /opt/ml/input/data/models/on-device-model
-WORKDIR /opt/ml/input/code/fastapi
+WORKDIR /opt/ml/input/code/fastapi/app
 
 RUN pip install --upgrade pip
-RUN pip install -r ./app/back/back_requirements.txt
+RUN pip install -r ./back/back_requirements.txt
 

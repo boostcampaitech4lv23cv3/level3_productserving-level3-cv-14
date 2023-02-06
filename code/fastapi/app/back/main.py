@@ -30,7 +30,7 @@ app = FastAPI()
 from mmdeploy_python import Detector
 
 detector = Detector(
-    model_path="../../data/models/on-device-model",
+    model_path="../../../data/models/on-device-model",
     device_name="cpu",
 )
 

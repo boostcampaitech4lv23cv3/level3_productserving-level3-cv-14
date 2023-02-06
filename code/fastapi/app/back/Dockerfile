@@ -128,9 +128,11 @@ RUN wget https://github.com/open-mmlab/mmdeploy/releases/download/v0.12.0/mmdepl
     
 # code
 COPY ./code/fastapi /opt/ml/input/code/fastapi
-COPY ./data/models/on-device-model /opt/ml/input/data/models/on-device-model
+COPY ./data/models/on-device-model2 /opt/ml/input/data/models/on-device-model2
 WORKDIR /opt/ml/input/code/fastapi/app
 
 RUN pip install --upgrade pip
+RUN apt update
 RUN pip install -r ./back/back_requirements.txt
+RUN apt-get install poppler-utils
 

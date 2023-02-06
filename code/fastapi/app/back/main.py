@@ -32,7 +32,7 @@ app = FastAPI()
 from mmdeploy_python import Detector
 
 detector = Detector(
-    model_path="../../../data/models/on-device-model",
+    model_path="../../../data/models/on-device-model2",
     device_name="cpu",
 )
 
@@ -97,7 +97,7 @@ def predict(exam_info: str, file: UploadFile = File(...)):
             "JPEG",
         )
 
-    inference = Inference_v2(
+    inference = InferenceOnDevice(
         images=images_np,
         detector=detector,
         q_bbox=q_bbox,

@@ -9,11 +9,10 @@ from utils import *
 from argparse import ArgumentParser
 
 
-def main(parser):
+def main(args):
     st.set_page_config(layout="wide")
     st.title("몇점일까?")
     st.subheader("평가원 객관식 문제 자동채점 프로그램")
-    args = parser.parse_args()
     backend_server = args.BackendServer
     year_choice, test_choice, type_choice = init_value()
     exam_info = year_choice + "_" + test_choice + "_" + type_choice
@@ -38,4 +37,5 @@ def main(parser):
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--BackendServer", type=str, default="34.64.169.3:30002")
-    main(parser)
+    args = parser.parse_args()
+    main(args)

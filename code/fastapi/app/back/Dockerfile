@@ -131,6 +131,7 @@ COPY ./code/fastapi /opt/ml/input/code/fastapi
 COPY ./data/models/on-device-model2 /opt/ml/input/data/models/on-device-model2
 WORKDIR /opt/ml/input/code/fastapi/app
 
+# install
 RUN pip install --upgrade pip
 RUN apt update
 RUN pip install -r ./back/back_requirements.txt

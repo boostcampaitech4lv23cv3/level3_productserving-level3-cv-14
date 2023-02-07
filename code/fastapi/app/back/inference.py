@@ -237,14 +237,11 @@ class Inference:
 
 
 def save_score_img(self, scoring_result):
-    # 채점된 이미지를 만들기 위해 o, x 이미지를 불러오는 부분입니다.
-    # TODO: 위의 input이미지의 resize 부분과 함께 고려해야 할 사항입니다.
     o_image = Image.open("/opt/ml/input/code/fastapi/app/scoring_image/correct.png")
     x_image = Image.open("/opt/ml/input/code/fastapi/app/scoring_image/wrong.png")
     o_width, o_height = o_image.size
     x_width, x_height = x_image.size
 
-    # TODO: 현재 paste 좌표가 좌측 하단으로 잡혀있음 (좌측 상단으로 바꿔야함. annotation 정보 확인 필요)
     score_img = []
     for idx, img in enumerate(self.images):  # fix
         background = Image.fromarray(img)
@@ -273,30 +270,6 @@ def save_score_img(self, scoring_result):
     return score_img
 
 
-# if __name__ == "__main__":
-#     from pycocotools.coco import COCO
-#     from mmdet.apis import init_detector
-#     import os
-#     from PIL import Image
-
-#     model_config = "/opt/ml/input/data/models/19/config.py"
-#     model_weight = "/opt/ml/input/data/models/19/model.pth"
-#     coco = COCO("/opt/ml/input/data/annotations/train_v1-3.json")
-#     detector = init_detector(model_config, model_weight, device="cuda:0")
-
-#     img_path = "/opt/ml/input/data/infer_test"
-#     img_paths = [os.path.join(img_path, img) for img in os.listdir(img_path)]
-#     images_np = [np.array(Image.open(img)) for img in img_paths]
-#     inference = Inference(
-#         images=images_np,
-#         exam_info="2021_f_a",
-#         coco=coco,
-#         detector=detector,
-#     )
-#     result = inference.make_user_solution(True, True)
-#     print("hi")
-
-
 class Inference_v2:
     def __init__(self, images, detector, q_bbox, answer, img_shape, time):
         self.images = images
@@ -319,13 +292,12 @@ class Inference_v2:
                     predict.append(list(bbox) + [label])
         return predict
 
-    # 사각형 겹침 여부 확인
     def overlap(self, bbox, patch):
         l1, t1, r1, b1 = bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]
         l2, t2, r2, b2 = patch[0], patch[1], patch[0] + patch[2], patch[1] + patch[3]
 
         overlap = not (r1 <= l2 or l1 >= r2 or b1 <= t2 or t1 >= b2)
-        return overlap  # True면 겹침
+        return overlap
 
     def resize_box(self, bbox, img_shape):
         w_r = img_shape[1] / self.origin_img_shape[0]
@@ -359,14 +331,12 @@ class Inference_v2:
         )
 
     def save_score_img(self, scoring_result):
-        # 채점된 이미지를 만들기 위해 o, x 이미지를 불러오는 부분입니다.
-        # TODO: 위의 input이미지의 resize 부분과 함께 고려해야 할 사항입니다.
+
         o_image = Image.open("/opt/ml/input/code/fastapi/app/scoring_image/correct.png")
         x_image = Image.open("/opt/ml/input/code/fastapi/app/scoring_image/wrong.png")
         o_width, o_height = o_image.size
         x_width, x_height = x_image.size
 
-        # TODO: 현재 paste 좌표가 좌측 하단으로 잡혀있음 (좌측 상단으로 바꿔야함. annotation 정보 확인 필요)
         score_img = []
         for idx, img in enumerate(self.images):  # fix
             background = Image.fromarray(img)

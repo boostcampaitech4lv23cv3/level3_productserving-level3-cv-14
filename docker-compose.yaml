@@ -14,6 +14,8 @@ services:
       dockerfile: code/fastapi/app/front/Dockerfile
     ports:
       - "30001:30001"
-    command: python3 -m streamlit run app/front/main.py --server.port 30001 --server.fileWatcherType none
+    command: python3 -m streamlit run app/front/main.py \
+     --server.port 30001 --server.fileWatcherType none \
+     -- --BackendServer 22.22.22.22
 
     

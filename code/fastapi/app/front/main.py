@@ -6,15 +6,15 @@ import io
 
 sys.path.append("/opt/ml/input/code/fastapi/app/front")
 from utils import *
-
-backend_server = "34.64.169.3:30002"
-st.set_page_config(layout="wide")
+from argparse import ArgumentParser
 
 
-def main():
+def main(parser):
+    st.set_page_config(layout="wide")
     st.title("몇점일까?")
     st.subheader("평가원 객관식 문제 자동채점 프로그램")
-
+    args = parser.parse_args()
+    backend_server = args.BackendServer
     year_choice, test_choice, type_choice = init_value()
     exam_info = year_choice + "_" + test_choice + "_" + type_choice
     uploaded_file = st.file_uploader("손으로 풀이된 시험지의 pdf파일을 업로드하세요.", type=["pdf"])
@@ -36,4 +36,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = ArgumentParser()
+    parser.add_argument("--BackendServer", type=str, default="34.64.169.3:30002")
+    main(parser)

@@ -1,0 +1,5 @@
+outs:
+- md5: b9abb9fc6cd15c32c74f8fa8a089108d.dir
+  size: 305800978
+  nfiles: 4
+  path: on-device-model

@@ -1,11 +1,8 @@
-from mmdet.apis import inference_detector
+# from mmdet.apis import inference_detector
 from PIL import Image
-import numpy as np
-import pandas as pd
-import cv2
-import json
-import io
 from copy import deepcopy
+from utils import *
+import cv2
 
 
 class Inference:
@@ -231,27 +228,123 @@ class Inference:
                     "confidence": [bbox[-2] for q, bbox in a_b],
                 }
             )
+            if not os.path.isdir("/opt/ml/input/code/fastapi/app/log"):
+                os.mkdir("/opt/ml/input/code/fastapi/app/log")
             pred_data.to_csv("/opt/ml/input/code/fastapi/app/log/predict_log.csv")
 
         user_solution = {q: int(bbox[-1]) for q, bbox in sorted(answer_bbox.items())}
         return user_solution
 
+
+def save_score_img(self, scoring_result):
+    o_image = Image.open("/opt/ml/input/code/fastapi/app/scoring_image/correct.png")
+    x_image = Image.open("/opt/ml/input/code/fastapi/app/scoring_image/wrong.png")
+    o_width, o_height = o_image.size
+    x_width, x_height = x_image.size
+
+    score_img = []
+    for idx, img in enumerate(self.images):  # fix
+        background = Image.fromarray(img)
+        question_ann = self.load_anns_q(idx)
+        for cat_id, bbox in question_ann.items():
+            question = cat_id - 6  # 문제 번호: 1 ~ 30
+            if scoring_result[question] == "O":
+                background.paste(
+                    o_image,
+                    (
+                        int(bbox[0] - o_width / 2),
+                        int(bbox[1] - o_height / 2) + 10,
+                    ),
+                    o_image,
+                )
+            elif scoring_result[question] == "X":
+                background.paste(
+                    x_image,
+                    (
+                        int(bbox[0] - x_width / 2),
+                        int(bbox[1] - x_height / 2) + 10,
+                    ),
+                    x_image,
+                )
+        score_img.append(background)
+    return score_img
+
+
+class Inference_v2:
+    def __init__(self, images, detector, q_bbox, answer, img_shape, time):
+        self.images = images
+        self.detector = detector
+        self.q_bbox = q_bbox
+        self.answer = answer
+        self.inference_detector = inference_detector
+        self.origin_img_shape = img_shape
+        self.time = time
+
+    def ltrb2xywh(self, bbox):
+        return [bbox[0], bbox[1], bbox[2] - bbox[0], bbox[3] - bbox[1]]
+
+    def get_predict(self, img, box_threshold=0.1):
+        inference = self.inference_detector(self.detector, img)
+        predict = []
+        for label, bboxes in enumerate(inference):
+            for bbox in bboxes:
+                if bbox[-1] > box_threshold:
+                    predict.append(list(bbox) + [label])
+        return predict
+
+    def overlap(self, bbox, patch):
+        l1, t1, r1, b1 = bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]
+        l2, t2, r2, b2 = patch[0], patch[1], patch[0] + patch[2], patch[1] + patch[3]
+
+        overlap = not (r1 <= l2 or l1 >= r2 or b1 <= t2 or t1 >= b2)
+        return overlap
+
+    def resize_box(self, bbox, img_shape):
+        w_r = img_shape[1] / self.origin_img_shape[0]
+        h_r = img_shape[0] / self.origin_img_shape[1]
+
+        bbox = [
+            int(bbox[0] * w_r),
+            int(bbox[1] * h_r),
+            int(bbox[2] * w_r),
+            int(bbox[3] * h_r),
+        ]
+        return bbox
+
+    def save_predict(self, img, img_path, bbox):
+        x, y, w, h = map(int, bbox[:4])
+        confidence = bbox[4]
+        pred = bbox[5]
+        cv2.putText(
+            img,
+            f"{pred}   {confidence:.4f}",
+            (x, y - 10),
+            cv2.FONT_HERSHEY_COMPLEX,
+            0.9,
+            (255, 0, 0),
+            3,
+        )
+        cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 3)
+        cv2.imwrite(
+            f"/opt/ml/input/code/fastapi/app/log/{self.time}/{img_path}_predict.jpg",
+            img,
+        )
+
     def save_score_img(self, scoring_result):
-        # 채점된 이미지를 만들기 위해 o, x 이미지를 불러오는 부분입니다.
-        # TODO: 위의 input이미지의 resize 부분과 함께 고려해야 할 사항입니다.
+
         o_image = Image.open("/opt/ml/input/code/fastapi/app/scoring_image/correct.png")
         x_image = Image.open("/opt/ml/input/code/fastapi/app/scoring_image/wrong.png")
         o_width, o_height = o_image.size
         x_width, x_height = x_image.size
 
-        # TODO: 현재 paste 좌표가 좌측 하단으로 잡혀있음 (좌측 상단으로 바꿔야함. annotation 정보 확인 필요)
         score_img = []
         for idx, img in enumerate(self.images):  # fix
             background = Image.fromarray(img)
-            question_ann = self.load_anns_q(idx)
-            for cat_id, bbox in question_ann.items():
-                question = cat_id - 6  # 문제 번호: 1 ~ 30
-                if scoring_result[question] == "O":
+            question = self.q_bbox[idx][0]
+            img_shape = img.shape
+            for q in question:
+                bbox = self.resize_box(question[q], img_shape)
+                if scoring_result[q] == "O":
                     background.paste(
                         o_image,
                         (
@@ -260,7 +353,7 @@ class Inference:
                         ),
                         o_image,
                     )
-                elif scoring_result[question] == "X":
+                elif scoring_result[q] == "X":
                     background.paste(
                         x_image,
                         (
@@ -272,26 +365,56 @@ class Inference:
             score_img.append(background)
         return score_img
 
+    def main(self):
+        images = deepcopy(self.images)
+        result = dict()
+        log_pred = []
+        for idx, img in enumerate(images):
+            predict = self.get_predict(img)
 
-if __name__ == "__main__":
-    from pycocotools.coco import COCO
-    from mmdet.apis import init_detector
-    import os
-    from PIL import Image
+            for i in range(len(predict)):
+                predict[i] = self.ltrb2xywh(predict[i][:4]) + predict[i][4:]
+            question = self.q_bbox[idx][0]
+            for q in question:
+                tmp = []
+                for p in predict:
+                    resize_q = self.resize_box(question[q], img.shape)
+                    if self.overlap(resize_q, p[:4]):
+                        p.append(q)
+                        tmp.append(p)
+                if tmp:
+                    tmp = sorted(tmp, key=lambda x: x[4])
+                    pred = tmp[-1]
+                    result[q] = pred[-2]
+                    log_pred.append(pred)
+                    self.save_predict(img, idx, pred)
 
-    model_config = "/opt/ml/input/data/models/19/config.py"
-    model_weight = "/opt/ml/input/data/models/19/model.pth"
-    coco = COCO("/opt/ml/input/data/annotations/train_v1-3.json")
-    detector = init_detector(model_config, model_weight, device="cuda:0")
+        tmp = [i for i in range(1, 31)]
+        for x in result:
+            if x in tmp:
+                tmp[x - 1] = 0
+        for x in tmp:
+            if x != 0:
+                result[x] = -1
 
-    img_path = "/opt/ml/input/data/infer_test"
-    img_paths = [os.path.join(img_path, img) for img in os.listdir(img_path)]
-    images_np = [np.array(Image.open(img)) for img in img_paths]
-    inference = Inference(
-        images=images_np,
-        exam_info="2021_f_a",
-        coco=coco,
-        detector=detector,
-    )
-    result = inference.make_user_solution(True, True)
-    print("hi")
+        _score = score(result, self.answer)
+        scoring_img = self.save_score_img(_score)
+        return scoring_img, log_pred
+
+
+class InferenceOnDevice(Inference_v2):
+    def __init__(self, images, detector, q_bbox, answer, img_shape, time):
+        self.images = images
+        self.detector = detector
+        self.q_bbox = q_bbox
+        self.answer = answer
+        self.origin_img_shape = img_shape
+        self.time = time
+
+    def get_predict(self, img, box_threshold=0.1):
+        bboxes, labels, _ = self.detector(img)
+        predict = []
+        for bbox, label in zip(bboxes, labels):
+            if bbox[-1] > box_threshold:
+                predict.append(list(bbox) + [label])
+        return predict

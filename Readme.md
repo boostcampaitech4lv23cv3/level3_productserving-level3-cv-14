@@ -14,3 +14,6 @@ path : code/fastapi/app/back/db_secrets.json
 ~~~
 docker-compose up
 ~~~
+
+## reference
+on-device branch의 코드는 [V-1.0](https://github.com/boostcampaitech4lv23cv3/level3_productserving-level3-cv-14/tree/V-1.0)을 기준으로 작성되었습니다.

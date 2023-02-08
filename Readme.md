@@ -1,7 +1,7 @@
 ## Prepare
 1. 모델 불러오기
 ~~~
-dvc pull data/models/on-device-model2
+dvc pull data/models/on-device-model2.dvc
 ~~~
 
 2. db_secrets.json 저장 \
